@@ -68,11 +68,14 @@ The following analysis is planned:
 # Respondent demographics
 ## By Age and Gender
 ```{r age, echo=FALSE}
-df_all %>% 
+p_age_gender <- df_all %>% 
   mutate(Age = 2022 - what_year_born) %>%  # assumption that all born on same day of year
   ggplot(aes(x = Age, fill = gender)) + 
-  geom_bar() + 
-  ggtitle('Respondents by age')
+  geom_histogram(, binwidth = 1) + 
+  ggtitle('Respondents by age and gender', subtitle = "Stacked bars show gender split for each age")
+  
+
+p_age_gender
   
 ```
 
@@ -88,29 +91,36 @@ df_all %>%
 ## By Region
 Other countries and UK regions featured in the survey responses and have been filtered for this interim report.
 ```{r region, echo=FALSE}
-df_all %>% 
+p_region <- df_all %>% 
   mutate(region = gsub("\\([^()]*\\)", "", region)) %>%  # remove content from within parentheses using gsub and regex
   count(region, sort = T) %>% 
   head(11) %>% 
-  ggplot(aes(x = fct_reorder(region, n), y = n, fill= region)) + 
+  mutate(region = fct_reorder(region, n)) %>% 
+  ggplot(aes(x = region, y = n, fill= region)) + 
   geom_bar(stat = "identity") + 
   ggtitle('Respondents by region') +
   xlab('Top regions') +
   theme(legend.position = "none") +
   coord_flip()
+
+p_region %>% ggplotly()
   
 ```
 
 ## By CA membership
 ```{r ca_membership, echo=FALSE}
-df_all %>% 
+p_is_ca_member <- df_all %>% 
   count(is_ca_member) %>% 
-  ggplot(aes(x = fct_reorder(is_ca_member, n), y = n, fill = is_ca_member)) + 
+  mutate(is_ca_member = fct_reorder(is_ca_member, n)) %>% 
+  ggplot(aes(x = is_ca_member, y = n, fill = is_ca_member, text = paste(is_ca_member, n, sep="\n"))) + 
   geom_bar(stat = "identity") + 
   ggtitle('Respondents by CA membership') +
   theme(legend.position = "none") +
   coord_flip() +
   xlab('')
+
+p_is_ca_member %>% 
+  ggplotly(tooltip = "text")
   
 ```
 
@@ -137,7 +147,8 @@ df_all %>%
   ggplot(aes(x = `Years playing croquet`, fill = main_code_played)) + 
   geom_histogram(bins = 30) + 
   ggtitle('Respondents by years playing croquet and main code') + 
-  coord_flip() 
+  coord_flip() +
+  theme(legend.position = "bottom") + guides(fill=guide_legend(nrow=3, byrow=TRUE))
   
 ```
 
