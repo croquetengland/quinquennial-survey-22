@@ -14,12 +14,14 @@ library(wordcloud) # handling and visualisaing text data
 short_names <- readr::read_csv('questions.csv')
 
 # Load raw data
-df_raw <- read_xlsx("data/2022 Survey of Croquet Players - with U18 section (BPE).xlsx",
+df_raw <- read_xlsx("data/2022 Survey of Croquet Players (final-anonymised with tidying suggestions.xlsx",
                     skip = 1,
-                    col_types = c('date', rep_len('text', 195)), # keep the datestamp as date format
-                    col_names = short_names$short_q %>% head(-1) # remove final row as not referenced
+                    col_types = c('date', rep_len('text', 195), 'numeric'), # keep the datestamp as date format
+                    col_names = c(short_names$short_q %>% head(-1), "responseID"), # remove final row as not referenced
+                    range = cell_cols("A:GO")
 ) %>% 
-  mutate(responseID = 1:nrow(.)) # Create response IDs
+  slice(-1) # Drop top row the header column as the 'skip' argument is ignored by the presence of 'range'
+  # mutate(responseID = 1:nrow(.)) # Create response IDs
 
 # Get long list of questions for further manipulation
 questions <- colnames(df_raw) %>% as_tibble()
@@ -90,6 +92,52 @@ df_clean <- df_clean %>%
     TRUE ~ main_code_played
   ))
 
-df_clean %>% 
-  count(main_code_played)
+# df_clean %>% 
+#   count(main_code_played)
 
+# * Set factor levels for club subs
+df_clean <- df_clean %>% 
+  mutate(club_subs = factor(club_subs, 
+                            levels = c(
+                              "There is no annual subscription at my club",
+                              "£50 or less per year",
+                              "£51 - £100",
+                              "£101 - £150",
+                              "£151 - £200",
+                              "£201 - £250",
+                              "£251 - £300",
+                              "More than £300 per year"
+
+                              )
+                            )
+         )
+
+# * Set factor levels for distances to main club
+df_clean <- df_clean %>% 
+  mutate(distance_home_to_main_club = factor(
+    distance_home_to_main_club,
+    levels = c(
+      "less than 1 mile",
+      "Between 1 and 3 miles",
+      "Between 3 and 5 miles",
+      "Between 5 and 10 miles",
+      "Between 10 and 25 miles",
+      "more than 25 miles" 
+    )
+  ))
+
+# * Set regions to named Federations
+df_clean2 <- df_clean %>% 
+  mutate(
+    region2 = case_when(
+      region == "Australia - ACT" ~ "Australia",
+      region == "Canada (Ontario)" ~ "Canada",
+      region == "Derbyshire" ~ "East Midlands",
+      region %in% c("Mid wales", "Wales but part of WMF", "West Wales") ~ "West Midlands",
+      region == "NZ" ~ "New Zealand",
+      region == "Southeast USA" ~ "USA",
+      region == "the pennines" ~ "East Midlands",
+      TRUE ~ region
+    )
+  )
+  

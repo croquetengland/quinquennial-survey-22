@@ -8,5 +8,7 @@ Analysis for the Quinquennial Survey 2022
 24/5 - 1.5 hrs
 25/5 - 1.5 hrs
 26/5 - 1 hr
-27/5 - 
+27/5 - 1 hr
+29/5 - 1.5 hrs
+30/5 - 1 hr
 
