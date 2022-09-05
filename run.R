@@ -130,6 +130,7 @@ df_clean <- df_clean %>%
 df_clean2 <- df_clean %>% 
   mutate(
     region2 = case_when(
+      # Clean free text
       region == "Australia - ACT" ~ "Australia",
       region == "Canada (Ontario)" ~ "Canada",
       region == "Derbyshire" ~ "East Midlands",
@@ -137,7 +138,22 @@ df_clean2 <- df_clean %>%
       region == "NZ" ~ "New Zealand",
       region == "Southeast USA" ~ "USA",
       region == "the pennines" ~ "East Midlands",
+      region == "overseas" ~ "Overseas",
+      region == "Sussex" ~ "South East",
+      region == "Los Angeles, CA" ~ "USA",
+      region == "United States" ~ "USA",
+      # Tidy up groupings
+      region == "South East (Surrey, Kent, West and East Sussex)" ~ "South East",
+      region == "West Midlands (Staffordshire, Shropshire, Hereford and Worcester, Warwickshire, Central Wales)" ~ "West Midlands",
+      region == "Southern (Oxfordshire, Berkshire, Buckinghamshire, Hampshire, Isle of Wight)" ~ "Southern",
+      region == "South West (Gloucestershire, Somerset, Wiltshire, Dorset, Devon, Cornwall, South Wales)" ~ "South West",
+      region == "East Anglia (Norfolk, Suffolk, Cambridgeshire, Bedfordshire, Hertfordshire, Essex)" ~ "East Anglia",
+      region == "North West (Lancashire, Greater Manchester, Merseyside, Cheshire, Cumbria, North Wales)" ~ "North West",
+      region == "North (Northumberland, Tyne and Wear, Durham, Cleveland)" ~ "North",
+      region == "East Midlands (Derbyshire, Nottinghamshire, Lincolnshire, Leicestershire, Rutland, Northamptonshire)" ~ "East Midlands",
       TRUE ~ region
     )
   )
-  
+ 
+df_clean2 <- df_clean2 %>% 
+  mutate(played_le_5yr = year_first_played_croquet >= 2017)
