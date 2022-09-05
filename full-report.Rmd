@@ -1,0 +1,302 @@
+---
+title: "Full Report<br>2022 Survey of Croquet Players"
+author: "The Croquet Association"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dplyr) # data manipulation
+library(magrittr)
+library(janitor)
+
+library(ggplot2) # data visualisation
+library(plotly)
+library(DT)
+library(kableExtra)
+library(forcats) # reordering factors
+
+source("run.R")
+
+# Useful for colouring bits of string text as needed
+colorize <- function(x, color) {
+  if (knitr::is_latex_output()) {
+    sprintf("\\textcolor{%s}{%s}", color, x)
+  } else if (knitr::is_html_output()) {
+    sprintf("<span style='color: %s;'>%s</span>", color, 
+      x)
+  } else x
+}
+```
+
+### Tips for reading this report
+
+* Use the left hand table of contents to expand particular sections
+* Tables in this report are interactive - click on a column heading to sort asc/desc, and use the search box to filter
+
+# About this report
+The 2022 Survey of Croquet Players is the fifth in a series of five-yearly player surveys conducted by the Croquet Association (CA), enabling the CA to better understand its membership and croquet players within its domain. 
+
+The aims of the survey were:
+
+* To capture the current 'state' of croquet within the CA's domains, 
+* To measure changes over the last five years (including the pandemic),
+* To better understand diversity and inclusion in croquet,
+* To generate analysis to guide future decisions on recruitment, grant applications and sponsorship,
+* To generate analysis to improve marketing at both national and club level.
+
+The survey was conducted between 22/03/2022 and 22/04/2022, with most participants completing the survey online. The 2022 survey team is Beatrice McGlen, Paul Brown and Eugene Chang, with support from the CA Office.
+
+This report represents findings from the data 'as is' with some data cleaning - **`r colorize("all figures are provisional at this stage", "red")`**. 
+Numbers and totals reported are likely to change for the final report (due October 2022) when the complete analysis and quality assurance has taken place.
+
+**Figures in this report are “of those players responding to this survey” rather than referring to actual totals across the CA.**
+
+Please send comments, questions and feedback to [communications@croquet.org.uk](mailto:communications@croquet.org.uk).
+<!-- *Many thanks to Kevin Carter and others for feedback/constructive comments in compiling the report.* -->
+
+## Planned analysis
+The following detailed analysis is planned for the complete report:
+
+* Data prep: checking for duplicate entries, creating derived variables, cleaning data,
+* Considering the representativeness of the data,
+* Time series on demographics of croquet players, comparing with previous years,
+* Understanding what attracts croquet players to the sport
+* Recommendations for the CA, Federations and clubs,
+* Updating the forecast models from the 2017 survey,
+* Diversity and Inclusion,
+* Covid impacts,
+* Analysis on U18s/U25s
+* Thematic analysis of free text comments.
+
+Specific data caveats and more detailed analysis methodology can be found at the end of this report.
+
+# Survey response rate
+There were `r nrow(df_clean)` responses including 23 paper responses. Work to identify duplicate or void responses is ongoing; at initial glance this is the largest response the CA has ever had for its player surveys.
+
+Response figures for previous surveys are as follows:
+
+
+```{r, echo=FALSE}
+df_prev_survey_count <- tibble::tribble(
+  ~Year, ~Total, ~Online, ~Paper,
+  2017, 1455, 1274, 181,
+  2012, 1020, 708, 312,
+  2007, 716, 231, 485,
+  2002, 1020, NA, NA
+)
+
+df_prev_survey_count %>% 
+  kable() %>% 
+  kable_styling()
+
+```
+
+# Respondent demographics
+## By Age and Gender
+Respondents were asked what year they were born. Ages were approximated by subtracting the declared year of birth from the current year (2022) - making the assumption that all respondents were born on the same date.
+
+The age distribution of respondents is plotted, alongside gender breakdowns by age.
+
+```{r age, echo=FALSE}
+p_age_gender <- df_clean %>% 
+  mutate(Age = 2022 - what_year_born) %>%  # assumption that all born on same day of year
+  ggplot(aes(x = Age, fill = gender)) + 
+  geom_histogram(binwidth = 1) + 
+  ggtitle('Respondents by age and gender', subtitle = "Stacked bars show gender split for each age")
+  
+
+p_age_gender
+  
+```
+
+## By Gender
+```{r gender, echo=FALSE}
+df_clean %>% 
+  ggplot(aes(x = gender, fill = gender)) + 
+  geom_bar() + 
+  ggtitle('Respondents by gender')
+  
+```
+
+## By Region
+Respondents were asked what region they lived in - with primary options drawn from the main CA Federations. Some respondents used the free text option to indicate residence in other countries and UK regions; these have not been included in this interim report.
+
+```{r region, echo=FALSE}
+p_region <- df_clean %>% 
+  mutate(region = gsub("\\([^()]*\\)", "", region)) %>%  # remove content from within parentheses using gsub and regex
+  count(region, sort = T) %>% 
+  head(11) %>% 
+  mutate(region = fct_reorder(region, n)) %>% 
+  ggplot(aes(x = region, y = n, fill= region)) + 
+  geom_bar(stat = "identity") + 
+  ggtitle('Respondents by UK region', subtitle = "Smaller groups (e.g. overseas countries) excluded") +
+  xlab('Top regions') +
+  theme(legend.position = "none") +
+  coord_flip()
+
+p_region 
+  
+```
+## New members to croquet
+A total of `r sum(df_clean2$played_le_5yr)` (`r (sum(df_clean2$played_le_5yr)/nrow(df_clean2)) %>% scales::percent()`) of respondents started playing in the last 5 years.
+
+# Club and CA memberships
+Respondents were asked about their club membership(s), and whether they were CA members; this was followed by questions exploring how they view their club(s) and the CA. In this report only the simple questions around club and CA membership is reported.
+
+## Club memberships
+```{r multi_club_membership, echo=FALSE}
+p_is_multi_club_mem <- df_clean %>% 
+  count(mem_more_than_one_club) %>% 
+  mutate(mem_more_than_one_club = fct_reorder(mem_more_than_one_club, n)) %>% 
+  ggplot(aes(x = mem_more_than_one_club, y = n, fill = mem_more_than_one_club, text = paste(mem_more_than_one_club, n, sep="\n"))) + 
+  geom_bar(stat = "identity") + 
+  ggtitle('Are you a member of more than one club?') +
+  theme(legend.position = "none") +
+  coord_flip() +
+  xlab('')
+
+p_is_multi_club_mem %>% 
+  ggplotly(tooltip = "text")
+  
+```
+
+## Travel distances to main club
+Most respondents live within 25 miles of their main club; the top bar indicates NA responses.
+
+```{r travel_dist_to_main_club, echo=FALSE}
+p_travel_dist_to_main_club <- df_clean %>%
+  # mutate(mem_more_than_one_club = fct_reorder(mem_more_than_one_club, n)) %>% 
+  ggplot(aes(x = distance_home_to_main_club, )) + 
+  geom_bar() + 
+  ggtitle('Travel distances to main club') +
+  theme(legend.position = "none") +
+  coord_flip() +
+  xlab('')
+
+p_travel_dist_to_main_club
+  
+```
+
+## CA membership
+```{r ca_membership, echo=FALSE}
+p_is_ca_member <- df_clean %>% 
+  count(is_ca_member) %>% 
+  mutate(is_ca_member = fct_reorder(is_ca_member, n)) %>% 
+  ggplot(aes(x = is_ca_member, y = n, fill = is_ca_member, text = paste(is_ca_member, n, sep="\n"))) + 
+  geom_bar(stat = "identity") + 
+  ggtitle('Respondents by CA membership') +
+  theme(legend.position = "none") +
+  coord_flip() +
+  xlab('')
+
+p_is_ca_member 
+  # ggplotly(tooltip = "text")
+```
+
+# Croquet experiences
+A range of questions were asked around respondents' experiences playing croquet.
+
+# Reasons for taking up croquet
+
+## Primary code of croquet
+```{r primary_code, echo=FALSE}
+df_clean %>% 
+  count(main_code_played) %>% 
+  # count(main_code_played)
+  # mutate(`Main code` = 2022 - year_first_played_croquet) %>%  
+  ggplot(aes(x = fct_reorder(main_code_played, n), y = n, fill = main_code_played)) + 
+  geom_bar(stat = "identity") + 
+  ggtitle('Respondents by main code of croquet') + 
+  coord_flip() +
+  theme(legend.position = 'none') +
+  xlab('')
+  
+```
+
+## Years playing croquet by main code
+Respondents self-identified whether they were primarily played AC, GC, or a combination. This information is combined with the durations respondents have played croquet, to visualise the split of main code against years played croquet. This shows that whilst those playing croquet longer have a wider composition of AC and GC players, those who have played <20 years are significantly outnumbered by those who consider themselves GC players.. 
+
+```{r years_playing_croquet, echo=FALSE}
+df_clean %>% 
+  mutate(`Years playing croquet` = 2022 - year_first_played_croquet
+         ) %>%  
+  ggplot(aes(x = `Years playing croquet`, fill = main_code_played)) + 
+  geom_histogram(bins = 10) + 
+  ggtitle('Respondents by years playing croquet and main code') + 
+  coord_flip() +
+  theme(legend.position = "bottom") + guides(fill=guide_legend(nrow=4, byrow=TRUE))
+  
+```
+
+## Years having membership of croquet club
+```{r years_as_club_member, echo=FALSE, warning=FALSE}
+df_clean %>% 
+  mutate(`Years as club member` = 2022 - year_first_joined_a_club) %>%  
+  ggplot(aes(x = `Years as club member`)) + 
+  geom_histogram(bins = 50) + 
+  ggtitle('Respondents by years as members of a croquet club')
+  
+```
+
+## Covid impacts on croquet
+As the first survey of croquet players since the pandemic, several questions looked to gauge Covid impacts on croquet.
+
+```{r covid_impacts, echo=FALSE}
+df_clean %>% 
+  count(covid_impacts, sort = T) %>% 
+  head(10) %>% 
+  ggplot(aes(x = fct_reorder(covid_impacts, n), y = n)) + 
+  geom_bar(stat = "identity") + 
+  ggtitle('Top 10 Covid impacts') +
+  theme(legend.position = "none") +
+  xlab('') +
+  coord_flip()
+  
+```
+
+# Cost of croquet
+Respondents were asked how much the cost of croquet was to them. Further analysis of these questions will help understand potential barriers to entry or subsequent progression.
+
+## Club subs
+```{r club_subs, echo=FALSE}
+df_clean %>% 
+  # count(club_subs, sort = T) %>% 
+  # head(10) %>% 
+  ggplot(aes(x = club_subs)) + 
+  geom_bar() + 
+  ggtitle("2022 subscriptions of participant's main clubs") +
+  theme(legend.position = "none") +
+  xlab('') +
+  coord_flip()
+  
+```
+
+
+# Analysis methodology
+This preliminary analysis was carried out using the open source analysis lanaguage R and its associated packages. 
+
+The methodology for the full report will be assessed independently outside the survey team.
+
+For more details on the methodology, please contact the survey team.
+
+## Assumptions and data corrections/caveats
+
+* Assumption 1: all data submitted by respondents was correct and that data entry has been correct (corrections have gradually taken place as errors discovered). E.g. Initial work has been undertaken to check for data discrepancies - e.g. those declaring as U18 whilst stating a birth year before 2004.
+
+* Assumption 2:Each each response is from a unique respondent; further checks will be undertaken to double check this.
+
+* Corrections 1:: A number of comments from various free text questions have been recoded and simplified to aid analysis.
+
+* Corrections 2: Imputed some data where reasonable to do so - e.g. taken midpoints, taken upper limit of range.
+
+* Suppression: To preserve anonymity and reduce identifiability of individuals from the data, responses are presented in groups where possible.
+
+
+<!-- ## Quality assurance -->
